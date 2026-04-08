@@ -1,0 +1,42 @@
+module startup
+
+extends consts
+import cli/cli
+
+workflow startup {
+  start: RegisterCommands
+
+  state RegisterCommands {
+    action cli.RegisterCommands(
+      modulesPath: $env.Config.application.modules_path,
+      workflowsPath: $env.Config.application.workflows_path,
+      version: $env.Config.application.version,
+      buildTime: $env.Config.application.build_time,
+      groups: $commands
+    ) as Result
+    on success -> WorkflowExecutor
+    on failure -> Failed
+  }
+
+  state WorkflowExecutor {
+    action cli.WorkflowExecutor(command: $Result.command, workflowPath: $Result.workflow, config: $Result.config, args: $Result.args)
+    on success -> Finish
+    on fail -> Failed
+  }
+
+  state Finish {
+    action services/common/response.Response(
+      value: "Done",
+      statusCode: 200
+    ) as FinalResult
+    end ok
+  }
+
+  state Failed {
+    action services/common/response.Response(
+      value: "Failed to start API server",
+      statusCode: 500
+    ) as ErrorResult
+    end fail
+  }
+}

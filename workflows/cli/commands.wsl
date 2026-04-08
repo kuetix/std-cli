@@ -1,0 +1,34 @@
+const {
+    commands: {
+        "*": [{
+            "*": {
+                "options": [
+                    {"long": "help", "short": "h", "value": false, "usage": "Help", "type": "bool"},
+                    {"long": "modules", "short": "mp", "value": "modules", "usage": "Path to modules directory"},
+                    {"long": "workflows", "short": "w", "value": "workflows", "usage": "Path to workflows directory"},
+                ]
+            }
+        },],
+
+        "help": [{
+            "": {
+                "workflow": "cli/help",
+                "usage": "Display help information about the CLI application\n\nUsage:\n  cli help [command]\n  cli command test\n\nOptions:\n  -h, --help     Show this help message and exit\n  -mp, --modules Path to modules directory\n  -w, --workflows Path to workflows directory\n\nExamples:\n  cli help\n  cli command test",
+                "options": []
+            }
+        },],
+
+        // Core commands
+        "command": [{
+            "test": {
+                "workflow": "cli/command/test",
+                "usage": "Usage:\n  cli command test [options]\n\nOptions:\n  -e, --echo     Echo a message for testing purposes\n  -h, --help     Show this help message and exit\n  -mp, --modules Path to modules directory\n  -w, --workflows Path to workflows directory\n\nExamples:\n  cli command test -e \"Hello World!\"",
+                "options": [
+                    {"long": "echo", "short": "e", "value": "Hello World!", "usage": "Echo for test"},
+               ]
+           }
+        },],
+
+    }
+}
+

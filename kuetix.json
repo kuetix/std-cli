@@ -1,0 +1,12 @@
+{
+  "name": "cli",
+  "type": "package",
+  "version": "0.1.0",
+  "description": "Kuetix engine package: cli",
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "engine": "v0.2.5",
+  "publisher": "",
+  "keywords": []
+}
