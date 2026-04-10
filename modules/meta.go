@@ -3,7 +3,7 @@ package modules
 
 import (
 	"github.com/kuetix/engine/boot"
-	"github.com/kuetix/engine/pkg/domain/interfaces"
+	"github.com/kuetix/engine/engine/domain/interfaces"
 )
 
 func init() {
@@ -21,11 +21,11 @@ func init() {
 				},
 				"WorkflowExecutor": {
 					Name:        "WorkflowExecutor",
-					NumIn:       4,
+					NumIn:       7,
 					NumOut:      1,
-					ArgTypes:    []string{"string", "string", "map[string]*ast.InterfaceType", "[]string"},
+					ArgTypes:    []string{"string", "string", "map[string]*ast.InterfaceType", "[]string", "bool", "bool", "bool"},
 					ReturnTypes: []string{"domain.FlowStepResult"},
-					ArgNames:    []string{"command", "workflowPath", "config", "args"},
+					ArgNames:    []string{"command", "workflowPath", "config", "args", "verbose", "debug", "quiet"},
 					ReturnNames: []string{"result"},
 				},
 			},

@@ -19,7 +19,15 @@ workflow startup {
   }
 
   state WorkflowExecutor {
-    action cli.WorkflowExecutor(command: $Result.command, workflowPath: $Result.workflow, config: $Result.config, args: $Result.args)
+    action cli.WorkflowExecutor(
+        command: $Result.command,
+        workflowPath: $Result.workflow,
+        config: $Result.config,
+        args: $Result.args,
+        verbose: "<<Result.global.verbose ?? false>>",
+        debug: $Result.global.debug || false,
+        quiet: $Result.global.quiet || false
+    )
     on success -> Finish
     on fail -> Failed
   }

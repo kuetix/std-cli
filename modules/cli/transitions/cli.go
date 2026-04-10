@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/kuetix/engine"
-	"github.com/kuetix/engine/boot"
-	"github.com/kuetix/engine/pkg/domain"
-	"github.com/kuetix/engine/pkg/domain/interfaces"
-	"github.com/kuetix/engine/pkg/workflow"
-	. "github.com/kuetix/std-cli/internal"
+	"github.com/kuetix/engine/engine/domain"
+	"github.com/kuetix/engine/engine/domain/interfaces"
+	"github.com/kuetix/engine/engine/workflow"
+	"github.com/kuetix/logger"
+	. "github.com/kuetix/std-cli/modules/cli/helpers"
 )
 
 type cliTransitions struct {
@@ -50,11 +51,21 @@ func (c *cliTransitions) RegisterCommands(
 	c.fs = make(map[string]*flag.FlagSet)
 	c.commands = make(map[string]interface{})
 	var each []interface{}
+	global := make(map[string]interface{})
+	eachNames := make(map[string]string)
 	if gs, ok := groups["*"].([]interface{}); ok {
 		for _, g := range gs {
 			if e, ok := g.(map[string]interface{}); ok {
 				if l, ok := e["*"].(map[string]interface{})["options"].([]interface{}); ok {
-					each = l
+					each = append(each, l...)
+				}
+			}
+		}
+		if len(each) > 0 {
+			for _, v := range each {
+				if o, ok := v.(map[string]interface{}); ok {
+					// {"long": "modules", "short": "mp", "value": "modules", "usage": "Path to modules directory"},
+					eachNames[o["long"].(string)] = o["short"].(string)
 				}
 			}
 		}
@@ -147,6 +158,14 @@ func (c *cliTransitions) RegisterCommands(
 								fmt.Printf("%s\nError: %s\n", c.buf.String(), err)
 								os.Exit(1)
 								return
+							} else {
+								for l := range eachNames {
+									if _, ok := flags[l]; !ok {
+										continue
+									}
+									option := flags[l]
+									global[l] = GetFlag(option)
+								}
 							}
 						}
 					}
@@ -165,17 +184,34 @@ func (c *cliTransitions) RegisterCommands(
 		"config":   c.commands[requestedCommand],
 		"args":     args,
 		"options":  options,
+		"global":   global,
 	}
 
 	return
 }
 
 // WorkflowExecutor executes a WSL workflow for an HTTP config
-func (c *cliTransitions) WorkflowExecutor(command, workflowPath string, config map[string]interface{}, args []string) (result domain.FlowStepResult) {
+func (c *cliTransitions) WorkflowExecutor(command, workflowPath string, config map[string]interface{}, args []string, verbose bool, debug bool, quiet bool) (result domain.FlowStepResult) {
 	options := c.Ctx.Engine.GetApplication().Env.Options
 
 	// Parse request into workflow arguments
-	options.Args = []string{
+	context := maps.Clone(options.Context)
+	context["args"] = args
+	context["config"] = config
+	context["command"] = command
+	context["flags"] = config["flags"]
+
+	if verbose {
+		logger.EnableInfo()
+	}
+
+	if debug {
+		logger.EnableDebug()
+	}
+
+	// Execute the workflow
+	workflowPath = filepath.Join(c.workflowsPath, workflowPath)
+	args = []string{
 		// Add configuration to args
 		fmt.Sprintf("command=%s", command),
 		fmt.Sprintf("modulesPath=%s", c.modulesPath),
@@ -183,21 +219,11 @@ func (c *cliTransitions) WorkflowExecutor(command, workflowPath string, config m
 		fmt.Sprintf("version=%s", c.version),
 		fmt.Sprintf("buildTime=%s", c.buildTime),
 	}
-
-	context := map[string]interface{}{
-		"command": command,
-		"config":  config,
-		"flags":   config["flags"],
-		"args":    args,
-	}
-
-	// Execute the workflow
-	workflowPath = filepath.Join(c.workflowsPath, workflowPath)
-	responses := engine.RunWorkflow(&boot.Options{
-		EngineName:    "kapi-api",
-		ConfigName:    "http",
-		Verbose:       options.Verbose,
-		Quiet:         options.Quiet,
+	responses := engine.RunWorkflow("production", &domain.Options{
+		EngineName:    "kuetix-cli",
+		ConfigName:    "cli",
+		Verbose:       verbose || debug,
+		Quiet:         quiet,
 		Amount:        1,
 		Retry:         1,
 		RetryDelay:    0,
@@ -207,9 +233,10 @@ func (c *cliTransitions) WorkflowExecutor(command, workflowPath string, config m
 		BuildTime:     options.BuildTime,
 		LogPath:       options.LogPath,
 		Config:        options.Config,
-		Args:          options.Args,
+		Args:          args,
 		Settings:      options.Settings,
 		Context:       context,
+		EmbedFS:       options.EmbedFS,
 	})
 
 	var response *workflow.WorkerResponse
@@ -243,7 +270,7 @@ func (c *cliTransitions) WorkflowExecutor(command, workflowPath string, config m
 			issues := response.Error.Errors()
 			for _, issue := range issues {
 				s := issue.Error()
-				if strings.Contains(s, " trace: ") && c.Ctx.Engine.GetApplication().Env.Config.Application.Debug != true {
+				if strings.Contains(s, " trace: ") && debug != true {
 					continue
 				}
 				errorMessages = append(errorMessages, s)

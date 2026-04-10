@@ -5,10 +5,11 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/kuetix/engine/pkg/domain"
-	"github.com/kuetix/engine/pkg/domain/interfaces"
-	"github.com/kuetix/engine/pkg/workflow"
-	. "github.com/kuetix/std-cli/internal"
+	"github.com/kuetix/engine/engine/domain"
+	"github.com/kuetix/engine/engine/domain/interfaces"
+	"github.com/kuetix/engine/engine/workflow"
+	"github.com/kuetix/logger"
+	. "github.com/kuetix/std-cli/modules/cli/helpers"
 )
 
 type commandTransition struct {
@@ -25,10 +26,12 @@ func NewCommandTransition() interfaces.ServiceTransitions { return &commandTrans
 
 //goland:noinspection GoUnusedParameter
 func (h *commandTransition) Test(command string, config map[string]interface{}, flags map[string]interface{}) (r domain.FlowStepResult) {
+	var helpText string
 	cfg := config["config"].(map[string]interface{})
-	helpText := cfg["usage"].(string) + "\n"
 	options := GetFlags(flags)
+	logger.Info("Command options: ", options, " Command: ", command)
 	if options["help"].(bool) {
+		helpText = cfg["usage"].(string) + "\n"
 		var buf bytes.Buffer
 		flagSet := config["flagSet"].(*flag.FlagSet)
 		flagSet.SetOutput(&buf)

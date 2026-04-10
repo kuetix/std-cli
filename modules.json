@@ -14,8 +14,8 @@
       },
       {
         "value": "WorkflowExecutor",
-        "label": "WorkflowExecutor(command, workflowPath, config, args)",
-        "description": "Function with 4 input(s) and 1 output(s)"
+        "label": "WorkflowExecutor(command, workflowPath, config, args, verbose, debug, quiet)",
+        "description": "Function with 7 input(s) and 1 output(s)"
       },
       {
         "value": "RegisterCommands",
@@ -24,8 +24,8 @@
       },
       {
         "value": "WorkflowExecutor",
-        "label": "WorkflowExecutor(command, workflowPath, config, args)",
-        "description": "Function with 4 input(s) and 1 output(s)"
+        "label": "WorkflowExecutor(command, workflowPath, config, args, verbose, debug, quiet)",
+        "description": "Function with 7 input(s) and 1 output(s)"
       }
     ]
   },

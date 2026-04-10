@@ -8,8 +8,7 @@ import (
 	"github.com/kuetix/std-cli/modules"
 
 	"github.com/kuetix/engine"
-	"github.com/kuetix/engine/boot"
-	"github.com/kuetix/engine/pkg/domain"
+	"github.com/kuetix/engine/engine/domain"
 )
 
 var Version string
@@ -27,10 +26,10 @@ func main() {
 	modules.Enable()
 
 	// Run the API server startup workflow using engine.RunWorkflow
-	options := &boot.Options{
+	options := &domain.Options{
 		EngineName:    "cli-pkg",
 		ConfigName:    "engine",
-		Verbose:       true,
+		Verbose:       false,
 		Quiet:         false,
 		Amount:        1,
 		Retry:         1,
@@ -47,7 +46,7 @@ func main() {
 		},
 		Context: map[string]interface{}{},
 	}
-	response := engine.RunWorkflow(options)
+	response := engine.RunWorkflow("production", options)
 
 	for _, res := range response {
 		if res.Error != nil {
@@ -58,6 +57,4 @@ func main() {
 			fmt.Printf("Result: %v\n", res.Response)
 		}
 	}
-
-	engine.ShutdownEngine()
 }

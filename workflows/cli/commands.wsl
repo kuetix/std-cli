@@ -3,6 +3,9 @@ const {
         "*": [{
             "*": {
                 "options": [
+                    {"long": "verbose", "short": "v", "value": false, "usage": "Verbose output", "type": "bool"},
+                    {"long": "debug", "short": "vv", "value": false, "usage": "Debug output", "type": "bool"},
+                    {"long": "quiet", "short": "q", "value": false, "usage": "Quiet mode", "type": "bool"},
                     {"long": "help", "short": "h", "value": false, "usage": "Help", "type": "bool"},
                     {"long": "modules", "short": "mp", "value": "modules", "usage": "Path to modules directory"},
                     {"long": "workflows", "short": "w", "value": "workflows", "usage": "Path to workflows directory"},
