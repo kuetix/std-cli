@@ -1,7 +1,6 @@
 package transitions
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 
@@ -25,18 +24,12 @@ type commandTransition struct {
 func NewCommandTransition() interfaces.ServiceTransitions { return &commandTransition{} }
 
 //goland:noinspection GoUnusedParameter
-func (h *commandTransition) Test(command string, config map[string]interface{}, flags map[string]interface{}) (r domain.FlowStepResult) {
+func (h *commandTransition) Echo(command string, config map[string]interface{}, flagSet *flag.FlagSet, flags map[string]interface{}) (r domain.FlowStepResult) {
 	var helpText string
-	cfg := config["config"].(map[string]interface{})
 	options := GetFlags(flags)
 	logger.Info("Command options: ", options, " Command: ", command)
 	if options["help"].(bool) {
-		helpText = cfg["usage"].(string) + "\n"
-		var buf bytes.Buffer
-		flagSet := config["flagSet"].(*flag.FlagSet)
-		flagSet.SetOutput(&buf)
-		flagSet.Usage()
-		helpText += buf.String()
+		helpText = GetUsage(config["usage"].(string), flagSet, h.Ctx.WorkflowContext.Value("workflowsPath").(string))
 	} else {
 		if echo, ok := options["echo"].(string); ok {
 			helpText += fmt.Sprintf("%s\n", echo)

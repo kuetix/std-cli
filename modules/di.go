@@ -11,7 +11,7 @@ import (
 func init() {
 	di.Boot()
 	di.DependencyInjection["cli"] = func(name string) {
-		di.ToResolve(defines.TransitionPrefix+"cli", func() interface{} {
+		di.ToResolve(defines.TransitionPrefix+"cli"+"/"+"cli", func() interface{} {
 			return workflow.ServiceTransitionMapping{ServiceName: name, Name: "cli", Impl: transitionsCli.NewCliTransition()}
 		})
 		di.ToResolve(defines.TransitionPrefix+"cli"+"/"+"command", func() interface{} {

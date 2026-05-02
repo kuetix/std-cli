@@ -1,9 +1,13 @@
 package helpers
 
 import (
+	"bytes"
 	"flag"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/kuetix/engine/engine/helpers"
 )
 
 func FlagInt(fs *flag.FlagSet, long, short, usage string, value int) []*int {
@@ -141,4 +145,32 @@ func GetFlags(flags map[string]interface{}) (r map[string]interface{}) {
 	}
 
 	return
+}
+
+func GetUsage(usage string, flagSet *flag.FlagSet, rootPath string) string {
+	var helpText string = ""
+	if usage != "" {
+		if strings.HasPrefix(usage, "file://") {
+			usage = strings.Trim(usage, "\n\n\t ")
+			file := strings.TrimPrefix(usage, "file://")
+			filePath := filepath.Join(rootPath, file)
+			content := helpers.ReadTextFile(filePath)
+			if !strings.HasPrefix(content, "err:") {
+				usage = content
+			}
+		}
+
+		if flagSet != nil {
+			var buf bytes.Buffer
+			flagSet.SetOutput(&buf)
+			flagSet.Usage()
+			helpText = buf.String() + "\n"
+		}
+
+		helpText = usage + "\n"
+
+		return helpText
+	}
+
+	return helpText
 }

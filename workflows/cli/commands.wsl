@@ -2,6 +2,7 @@ const {
     commands: {
         "*": [{
             "*": {
+                "init": "cli/init",
                 "options": [
                     {"long": "verbose", "short": "v", "value": false, "usage": "Verbose output", "type": "bool"},
                     {"long": "debug", "short": "vv", "value": false, "usage": "Debug output", "type": "bool"},
@@ -16,19 +17,29 @@ const {
         "help": [{
             "": {
                 "workflow": "cli/help",
-                "usage": "Display help information about the CLI application\n\nUsage:\n  cli help [command]\n  cli command test\n\nOptions:\n  -h, --help     Show this help message and exit\n  -mp, --modules Path to modules directory\n  -w, --workflows Path to workflows directory\n\nExamples:\n  cli help\n  cli command test",
+                "usage": "Display help information about the CLI application\n\nUsage:\n  cli help [command]\n  cli command echo\n\nOptions:\n  -h, --help     Show this help message and exit\n  -mp, --modules Path to modules directory\n  -w, --workflows Path to workflows directory\n\nExamples:\n  cli help\n  cli command echo",
                 "options": []
+            },
+            "*": {
+                "$extends": "",
             }
         },],
 
         // Core commands
         "command": [{
-            "test": {
-                "workflow": "cli/command/test",
-                "usage": "Usage:\n  cli command test [options]\n\nOptions:\n  -e, --echo     Echo a message for testing purposes\n  -h, --help     Show this help message and exit\n  -mp, --modules Path to modules directory\n  -w, --workflows Path to workflows directory\n\nExamples:\n  cli command test -e \"Hello World!\"",
+            "": {
                 "options": [
-                    {"long": "echo", "short": "e", "value": "Hello World!", "usage": "Echo for test"},
+                    {"long": "echo", "short": "e", "value": "Hello World!", "usage": "Echo for input value"},
                ]
+           }
+            "help": {
+                "$extends": "",
+                "workflow": "cli/help",
+                "usage": "file://cli/usage/command_echo.txt",
+           }
+            "echo": {
+                "$extends": "help",
+                "workflow": "cli/command/echo",
            }
         },],
 

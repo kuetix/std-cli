@@ -1,0 +1,11 @@
+Usage:
+  cli command echo [options]
+
+Options:
+  -e, --echo     Echo a message for testing purposes
+  -h, --help     Show this help message and exit
+  -mp, --modules Path to modules directory
+  -w, --workflows Path to workflows directory
+
+Examples:
+  cli command echo -e "Hello World!"

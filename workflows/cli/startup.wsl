@@ -7,26 +7,33 @@ workflow startup {
   start: RegisterCommands
 
   state RegisterCommands {
-    action cli.RegisterCommands(
+    action cli/cli.RegisterCommands(
       modulesPath: $env.Config.application.modules_path,
       workflowsPath: $env.Config.application.workflows_path,
       version: $env.Config.application.version,
       buildTime: $env.Config.application.build_time,
+      defaultCommand: "help",
       groups: $commands
     ) as Result
     on success -> WorkflowExecutor
-    on failure -> Failed
+    on fail -> UnregisteredCommand
+  }
+
+  state UnregisteredCommand {
+    action cli/cli.UnregisteredCommand($@) as Result
+    on success -> _
+    on fail -> Failed
   }
 
   state WorkflowExecutor {
-    action cli.WorkflowExecutor(
+    action cli/cli.WorkflowExecutor(
         command: $Result.command,
         workflowPath: $Result.workflow,
         config: $Result.config,
         args: $Result.args,
         verbose: "<<Result.global.verbose ?? false>>",
-        debug: $Result.global.debug || false,
-        quiet: $Result.global.quiet || false
+        debug: $Result.global.debug??false,
+        quiet: $Result.global.quiet??false
     )
     on success -> Finish
     on fail -> Failed
@@ -34,7 +41,7 @@ workflow startup {
 
   state Finish {
     action services/common/response.Response(
-      value: "Done",
+      value: $@??"Done",
       statusCode: 200
     ) as FinalResult
     end ok
