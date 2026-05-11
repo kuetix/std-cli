@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"maps"
-	"net/http"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -68,7 +67,7 @@ func (c *cliTransitions) RegisterCommands(
 
 	app := c.Ctx.Engine.GetApplication()
 
-	requestedCommand, args, options := GetArgs()
+	mainCommand, requestedCommand, args, options := GetArgs()
 	if requestedCommand == "" {
 		requestedCommand = defaultCommand
 	}
@@ -151,10 +150,11 @@ func (c *cliTransitions) RegisterCommands(
 							}
 							flags = c.getOptions(optionsSlice, c.fs[cmd])
 							c.commands[cmd] = map[string]interface{}{
-								"workflow": commandConfig.(map[string]interface{})["workflow"],
-								"config":   commandConfig,
-								"flags":    flags,
-								"flagSet":  c.fs[requestedCommand],
+								"main_command": mainCommand,
+								"workflow":     commandConfig.(map[string]interface{})["workflow"],
+								"config":       commandConfig,
+								"flags":        flags,
+								"flagSet":      c.fs[requestedCommand],
 							}
 							_ = c.fs[cmd].Parse(options)
 							for l := range eachNames {
@@ -174,11 +174,12 @@ func (c *cliTransitions) RegisterCommands(
 	app.Env.Options.Context["commands"] = c.commands
 	parts := strings.Split(requestedCommand, ".")
 	app.Env.Options.Context["requestedCommand"] = map[string]interface{}{
-		"command": requestedCommand,
-		"parts":   parts,
-		"args":    args,
-		"options": options,
-		"global":  global,
+		"main_command": mainCommand,
+		"command":      requestedCommand,
+		"parts":        parts,
+		"args":         args,
+		"options":      options,
+		"global":       global,
 	}
 
 	requestedCommands := []string{
@@ -355,43 +356,12 @@ func (c *cliTransitions) WorkflowExecutor(command, workflowPath string, config m
 		response = responseRef
 	}
 
-	// Check if workflow execution was successful
-	if response == nil || !response.IsSuccess() {
-		result.StatusCode = http.StatusInternalServerError
-		var errorMessages []string = make([]string, 0)
-		if response != nil && response.Error != nil {
-			result.StatusCode = response.StatusCode
-			issues := response.Error.Errors()
-			for _, issue := range issues {
-				s := issue.Error()
-				if strings.Contains(s, " trace: ") && debug != true {
-					continue
-				}
-				errorMessages = append(errorMessages, s)
-			}
-			result.Error = response.Error
-		}
-		if len(errorMessages) == 0 {
-			errorMessages = append(errorMessages, "Workflow execution failed with unknown error")
-		}
-		RespondErrors(errorMessages, result.StatusCode)
-		result.Success = false
-		return
-	}
-
-	// Extract response from workflow result
-	if response.Response != nil {
-		// Send the workflow response back to client
-		RespondSuccess(response.Response)
-	} else {
-		RespondSuccess(map[string]interface{}{
-			"success": true,
-			"message": "Workflow executed successfully",
-		})
-	}
-
 	result.Success = true
-	result.Response = response.Response
+	if response != nil {
+		result.Response = response.Response
+		result.StatusCode = response.StatusCode
+		result.Error = response.Error
+	}
 	return
 }
 

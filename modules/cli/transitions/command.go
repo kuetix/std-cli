@@ -29,7 +29,7 @@ func (h *commandTransition) Echo(command string, config map[string]interface{}, 
 	options := GetFlags(flags)
 	logger.Info("Command options: ", options, " Command: ", command)
 	if options["help"].(bool) {
-		helpText = GetUsage(config["usage"].(string), flagSet, h.Ctx.WorkflowContext.Value("workflowsPath").(string))
+		helpText = GetUsage(h.Ctx.Engine.GetApplication(), config["usage"].(string), flagSet, h.Ctx.WorkflowContext.Value("workflowsPath").(string))
 	} else {
 		if echo, ok := options["echo"].(string); ok {
 			helpText += fmt.Sprintf("%s\n", echo)

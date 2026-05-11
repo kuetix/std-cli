@@ -3,11 +3,12 @@ package helpers
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/kuetix/engine/engine/helpers"
+	"github.com/kuetix/engine/engine/domain"
 )
 
 func FlagInt(fs *flag.FlagSet, long, short, usage string, value int) []*int {
@@ -63,12 +64,13 @@ func StringArg(defaultValue string, flags ...*string) func() *string {
 	}
 }
 
-func GetArgs() (command string, args []string, options []string) {
+func GetArgs() (mainCommand string, command string, args []string, options []string) {
 	args = []string{}
 	options = []string{}
 	nextIsOptionValue := false
 	foundCommand := false
 	foundSubcommand := false
+	mainCommand = ""
 
 	for i := 1; i < len(os.Args); i++ {
 		arg := os.Args[i]
@@ -87,6 +89,7 @@ func GetArgs() (command string, args []string, options []string) {
 		if !foundCommand && !strings.HasPrefix(arg, "-") {
 			foundCommand = true
 			command = arg
+			mainCommand = arg
 			continue
 		}
 
@@ -105,7 +108,7 @@ func GetArgs() (command string, args []string, options []string) {
 		}
 	}
 
-	return command, args, options
+	return mainCommand, command, args, options
 }
 
 func GetFlag(option any) (value any) {
@@ -147,14 +150,14 @@ func GetFlags(flags map[string]interface{}) (r map[string]interface{}) {
 	return
 }
 
-func GetUsage(usage string, flagSet *flag.FlagSet, rootPath string) string {
+func GetUsage(app domain.Application, usage string, flagSet *flag.FlagSet, rootPath string) string {
 	var helpText string = ""
 	if usage != "" {
 		if strings.HasPrefix(usage, "file://") {
 			usage = strings.Trim(usage, "\n\n\t ")
 			file := strings.TrimPrefix(usage, "file://")
 			filePath := filepath.Join(rootPath, file)
-			content := helpers.ReadTextFile(filePath)
+			content := ReadFileAsString(app, filePath)
 			if !strings.HasPrefix(content, "err:") {
 				usage = content
 			}
@@ -173,4 +176,23 @@ func GetUsage(usage string, flagSet *flag.FlagSet, rootPath string) string {
 	}
 
 	return helpText
+}
+
+//goland:noinspection GoUnusedExportedFunction
+func ReadFileAsString(app domain.Application, path string) string {
+	var candidates = []string{
+		fmt.Sprintf("%s/%s", app.EmbedFSRootPath, path),
+		fmt.Sprintf("%s", path),
+	}
+	for _, candidate := range candidates {
+		content, err := app.EmbedFS.ReadFile(candidate)
+		if err == nil {
+			return string(content)
+		}
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "err:" + err.Error()
+	}
+	return string(content)
 }

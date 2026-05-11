@@ -40,12 +40,12 @@ func (h *helpTransition) Help(command string, commands, requestedCommand, comman
 	if c, ok := commands[lookingFor]; ok {
 		if usage, ok := c.(map[string]interface{})["config"].(map[string]interface{})["usage"].(string); ok {
 			logger.Info("Command options: ", options, " Command: ", lookingFor)
-			helpText = helpers.GetUsage(usage, flagSet, path)
+			helpText = helpers.GetUsage(h.Ctx.Engine.GetApplication(), usage, flagSet, path)
 		}
 	} else {
 		logger.Info("Command options: ", options, " Command: ", command)
 		if usage, ok := config["usage"].(string); ok {
-			helpText = helpers.GetUsage(usage, flagSet, path)
+			helpText = helpers.GetUsage(h.Ctx.Engine.GetApplication(), usage, flagSet, path)
 		}
 	}
 
