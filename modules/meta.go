@@ -9,38 +9,6 @@ import (
 func init() {
 	boot.AddMetaFunctionCache(map[string]map[string]map[string]interfaces.FunctionMetadata{
 		"cli": {
-			"command": {
-				"Echo": {
-					GoModule:    "github.com/kuetix/std-cli",
-					ModulePath:  "modules",
-					FilePath:    "modules/cli/transitions/command.go",
-					Namespace:   "command",
-					Class:       "cli",
-					Name:        "Echo",
-					NumIn:       4,
-					NumOut:      1,
-					ArgTypes:    []string{"string", "map[string]interface{}", "*flag.FlagSet", "map[string]interface{}"},
-					ReturnTypes: []string{"domain.FlowStepResult"},
-					ArgNames:    []string{"command", "config", "flagSet", "flags"},
-					ReturnNames: []string{"r"},
-				},
-			},
-			"help": {
-				"Help": {
-					GoModule:    "github.com/kuetix/std-cli",
-					ModulePath:  "modules",
-					FilePath:    "modules/cli/transitions/help.go",
-					Namespace:   "help",
-					Class:       "cli",
-					Name:        "Help",
-					NumIn:       7,
-					NumOut:      1,
-					ArgTypes:    []string{"string", "map[string]interface{}", "map[string]interface{}", "map[string]interface{}", "map[string]interface{}", "*flag.FlagSet", "map[string]interface{}"},
-					ReturnTypes: []string{"domain.FlowStepResult"},
-					ArgNames:    []string{"command", "commands", "requestedCommand", "commandConfig", "config", "flagSet", "flags"},
-					ReturnNames: []string{"r"},
-				},
-			},
 			"cli": {
 				"InitCommand": {
 					GoModule:    "github.com/kuetix/std-cli",
@@ -97,6 +65,38 @@ func init() {
 					ReturnTypes: []string{"domain.FlowStepResult"},
 					ArgNames:    []string{"command", "workflowPath", "config", "args", "verbose", "debug", "quiet"},
 					ReturnNames: []string{"result"},
+				},
+			},
+			"command": {
+				"Echo": {
+					GoModule:    "github.com/kuetix/std-cli",
+					ModulePath:  "modules",
+					FilePath:    "modules/cli/transitions/command.go",
+					Namespace:   "command",
+					Class:       "cli",
+					Name:        "Echo",
+					NumIn:       4,
+					NumOut:      1,
+					ArgTypes:    []string{"string", "map[string]interface{}", "*flag.FlagSet", "map[string]interface{}"},
+					ReturnTypes: []string{"domain.FlowStepResult"},
+					ArgNames:    []string{"command", "config", "flagSet", "flags"},
+					ReturnNames: []string{"r"},
+				},
+			},
+			"help": {
+				"Help": {
+					GoModule:    "github.com/kuetix/std-cli",
+					ModulePath:  "modules",
+					FilePath:    "modules/cli/transitions/help.go",
+					Namespace:   "help",
+					Class:       "cli",
+					Name:        "Help",
+					NumIn:       7,
+					NumOut:      1,
+					ArgTypes:    []string{"string", "map[string]interface{}", "map[string]interface{}", "map[string]interface{}", "map[string]interface{}", "*flag.FlagSet", "map[string]interface{}"},
+					ReturnTypes: []string{"domain.FlowStepResult"},
+					ArgNames:    []string{"command", "commands", "requestedCommand", "commandConfig", "config", "flagSet", "flags"},
+					ReturnNames: []string{"r"},
 				},
 			},
 		},

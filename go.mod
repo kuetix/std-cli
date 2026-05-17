@@ -4,9 +4,9 @@ go 1.26.1
 
 require (
 	github.com/kuetix/container v0.1.0
-	github.com/kuetix/engine v0.1.4
+	github.com/kuetix/engine v1.0.0
 	github.com/kuetix/logger v1.0.0
-	github.com/kuetix/std-core v0.0.0-00010101000000-000000000000
+	github.com/kuetix/std-core v1.0.0
 )
 
 require (
@@ -29,7 +29,3 @@ require (
 	golang.org/x/text v0.35.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
-
-replace github.com/kuetix/engine => ../../engine
-
-replace github.com/kuetix/std-core => ../../packages/core
