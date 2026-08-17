@@ -157,6 +157,9 @@ func (c *cliTransitions) RegisterCommands(
 								"flagSet":      c.fs[requestedCommand],
 							}
 							_ = c.fs[cmd].Parse(options)
+							// Expose positional args on the inner command
+							// config — transitions read config["args"].
+							commandConfig.(map[string]interface{})["args"] = args
 							for l := range eachNames {
 								if _, ok := flags[l]; !ok {
 									continue
@@ -218,6 +221,9 @@ func (c *cliTransitions) RegisterCommands(
 
 	r.Success = true
 	c.commands[requestedCommand].(map[string]interface{})["flagSet"] = c.fs[requestedCommand]
+	// Transitions read positional args from their command config
+	// (config["args"]), so expose them there as well.
+	c.commands[requestedCommand].(map[string]interface{})["args"] = args
 	commandWorkflow := c.commands[requestedCommand].(map[string]interface{})["workflow"]
 	r.Response = map[string]interface{}{
 		"commands": c.commands,
