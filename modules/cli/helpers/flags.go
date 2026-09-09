@@ -119,7 +119,7 @@ func GetArgs(boolFlags map[string]bool) (mainCommand string, command string, arg
 			args = append(args, arg)
 		} else {
 			options = append(options, arg)
-			if isFlag && !isSelfContainedFlag(arg, boolFlags) {
+			if !isSelfContainedFlag(arg, boolFlags) {
 				nextIsOptionValue = true
 			}
 		}
