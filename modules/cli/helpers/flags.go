@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/kuetix/engine/engine/domain"
+	"github.com/kuetix/engine/engine/workflow"
 )
 
 func FlagInt(fs *flag.FlagSet, long, short, usage string, value int) []*int {
@@ -64,7 +65,20 @@ func StringArg(defaultValue string, flags ...*string) func() *string {
 	}
 }
 
-func GetArgs() (mainCommand string, command string, args []string, options []string) {
+// GetArgs splits os.Args into the command/subcommand, positional args, and
+// raw option tokens. It has no access to a resolved command's flag schema
+// (the command isn't even identified yet), so — beyond the cases boolFlags
+// covers — it falls back to the historical assumption that a "-"-prefixed
+// token is followed by a separate value token. boolFlags names every flag
+// (long and short spellings) declared with "type": "bool" anywhere in
+// commands.wsl, collected up front by the caller; those tokens (and any
+// token already carrying its value via "--flag=value") are known to be
+// self-contained, so the token right after them is never swallowed as a
+// bogus value. Without this, "-v" (a global bool flag) ahead of the command
+// consumed the command word itself as -v's "value", and a per-command bool
+// flag like "--public" ahead of its workflow name consumed the name the
+// same way.
+func GetArgs(boolFlags map[string]bool) (mainCommand string, command string, args []string, options []string) {
 	args = []string{}
 	options = []string{}
 	nextIsOptionValue := false
@@ -74,8 +88,9 @@ func GetArgs() (mainCommand string, command string, args []string, options []str
 
 	for i := 1; i < len(os.Args); i++ {
 		arg := os.Args[i]
+		isFlag := strings.HasPrefix(arg, "-")
 
-		if strings.HasPrefix(arg, "-") {
+		if isFlag {
 			nextIsOptionValue = false
 		}
 
@@ -86,7 +101,7 @@ func GetArgs() (mainCommand string, command string, args []string, options []str
 		}
 
 		// Found the command (e.g., "add")
-		if !foundCommand && !strings.HasPrefix(arg, "-") {
+		if !foundCommand && !isFlag {
 			foundCommand = true
 			command = arg
 			mainCommand = arg
@@ -94,21 +109,33 @@ func GetArgs() (mainCommand string, command string, args []string, options []str
 		}
 
 		// Found the subcommand (e.g., "module")
-		if foundCommand && !foundSubcommand && !strings.HasPrefix(arg, "-") {
+		if foundCommand && !foundSubcommand && !isFlag {
 			foundSubcommand = true
 			command = command + "." + arg
 			continue
 		}
 
-		if foundSubcommand && !strings.HasPrefix(arg, "-") {
+		if foundSubcommand && !isFlag {
 			args = append(args, arg)
 		} else {
-			nextIsOptionValue = true
 			options = append(options, arg)
+			if isFlag && !isSelfContainedFlag(arg, boolFlags) {
+				nextIsOptionValue = true
+			}
 		}
 	}
 
 	return mainCommand, command, args, options
+}
+
+// isSelfContainedFlag reports whether arg is a flag token that never takes a
+// separately-tokenized value: it already embeds one ("--flag=value") or its
+// bare long/short name (dashes stripped) is a known boolean flag.
+func isSelfContainedFlag(arg string, boolFlags map[string]bool) bool {
+	if strings.Contains(arg, "=") {
+		return true
+	}
+	return boolFlags[strings.TrimLeft(arg, "-")]
 }
 
 func GetFlag(option any) (value any) {
@@ -176,6 +203,25 @@ func GetUsage(app domain.Application, usage string, flagSet *flag.FlagSet, rootP
 	}
 
 	return helpText
+}
+
+// RenderHelp resolves a command's help text for a `--help` request. It reads
+// config["usage"] (a `file://` reference into the workflows FS, or literal
+// text) and returns the resolved content. It tolerates a nil session or a
+// session without an engine (unit tests call transitions directly), and a
+// missing config["flagSet"].
+func RenderHelp(ctx *workflow.WorkerSessionContext, config map[string]interface{}, flags map[string]interface{}) string {
+	var app domain.Application
+	if ctx != nil && ctx.Engine != nil {
+		app = ctx.Engine.GetApplication()
+	}
+	usage, _ := config["usage"].(string)
+	var fs *flag.FlagSet
+	if f, ok := config["flagSet"].(*flag.FlagSet); ok {
+		fs = f
+	}
+	root, _ := GetFlags(flags)["workflows"].(string)
+	return GetUsage(app, usage, fs, root)
 }
 
 //goland:noinspection GoUnusedExportedFunction

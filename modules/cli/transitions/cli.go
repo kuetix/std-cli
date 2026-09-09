@@ -67,10 +67,40 @@ func (c *cliTransitions) RegisterCommands(
 
 	app := c.Ctx.Engine.GetApplication()
 
-	mainCommand, requestedCommand, args, options := GetArgs()
+	// Every flag's schema (including which ones are boolean) is already
+	// fully known statically in groups (commands.wsl's const), regardless of
+	// which command ends up requested — so collect it before GetArgs splits
+	// os.Args, letting it tell a bare boolean flag from one that still needs
+	// a following value token.
+	mainCommand, requestedCommand, args, options := GetArgs(collectBoolFlagNames(groups))
 	if requestedCommand == "" {
 		requestedCommand = defaultCommand
 	}
+
+	parts := strings.Split(requestedCommand, ".")
+	// requestedCommandCandidates lists every flagSet key this invocation could
+	// resolve to, in priority order: the exact dotted command GetArgs()
+	// produced, then "<group>.*", "<group>.*.*", ... wildcard fallbacks
+	// (registered via "*": {"$extends": ""} entries in commands.wsl).
+	// GetArgs() always treats a second bare token as a subcommand keyword, so
+	// a command whose only positional argument is a plain value rather than a
+	// real subcommand (e.g. `install <name>`, `run <target>`) only ever
+	// matches one of the wildcard forms below, never the exact dotted
+	// command. The registration gate further down must accept those
+	// candidates too — matching only the literal requestedCommand silently
+	// skipped flag registration (and fs.Parse) for such commands, leaving
+	// every option after the name (--output, --owner, --host, --check, ...)
+	// unparsed and stuck at its JSON-declared default.
+	requestedCommandCandidates := []string{requestedCommand}
+	candidateBase := parts[0]
+	for i := 1; i < len(parts); i++ {
+		requestedCommandCandidates = append(requestedCommandCandidates, candidateBase+strings.Repeat(".*", i))
+	}
+	candidateCmds := make(map[string]bool, len(requestedCommandCandidates))
+	for _, v := range requestedCommandCandidates {
+		candidateCmds[v] = true
+	}
+
 	c.fs = make(map[string]*flag.FlagSet)
 	c.commands = make(map[string]interface{})
 	var each []interface{}
@@ -131,6 +161,12 @@ func (c *cliTransitions) RegisterCommands(
 						c.fs[cmd] = flag.NewFlagSet(command, flag.ContinueOnError)
 						c.fs[cmd].SetOutput(&c.buf)
 						commandConfig = c.resolveCommandConfig(commandConfig.(map[string]interface{}), commandsMap)
+						// Expose the command's FlagSet on the inner config too —
+						// workflows pass `config: $config.config` to their
+						// transitions, and several of those render `--help` via
+						// config["flagSet"]. Without this it is nil and the
+						// transition panics on the type assertion.
+						commandConfig.(map[string]interface{})["flagSet"] = c.fs[cmd]
 						c.commands[cmd] = map[string]interface{}{
 							"workflow": commandConfig.(map[string]interface{})["workflow"],
 							"config":   commandConfig,
@@ -138,7 +174,7 @@ func (c *cliTransitions) RegisterCommands(
 							"flagSet":  c.fs[cmd],
 						}
 						if requestedCommand != defaultCommand {
-							if requestedCommand != cmd {
+							if !candidateCmds[cmd] {
 								continue
 							}
 						}
@@ -154,7 +190,7 @@ func (c *cliTransitions) RegisterCommands(
 								"workflow":     commandConfig.(map[string]interface{})["workflow"],
 								"config":       commandConfig,
 								"flags":        flags,
-								"flagSet":      c.fs[requestedCommand],
+								"flagSet":      c.fs[cmd],
 							}
 							_ = c.fs[cmd].Parse(options)
 							// Expose positional args on the inner command
@@ -175,7 +211,6 @@ func (c *cliTransitions) RegisterCommands(
 	}
 
 	app.Env.Options.Context["commands"] = c.commands
-	parts := strings.Split(requestedCommand, ".")
 	app.Env.Options.Context["requestedCommand"] = map[string]interface{}{
 		"main_command": mainCommand,
 		"command":      requestedCommand,
@@ -185,17 +220,8 @@ func (c *cliTransitions) RegisterCommands(
 		"global":       global,
 	}
 
-	requestedCommands := []string{
-		requestedCommand,
-	}
-	cmd := parts[0]
-	for i := 1; i < len(parts); i++ {
-		repeat := strings.Repeat(".*", i)
-		requestedCommands = append(requestedCommands, strings.Join([]string{cmd, repeat}, ""))
-	}
-
 	var ok bool
-	for _, v := range requestedCommands {
+	for _, v := range requestedCommandCandidates {
 		_, ok = c.fs[v]
 		if ok {
 			requestedCommand = v
@@ -236,6 +262,56 @@ func (c *cliTransitions) RegisterCommands(
 	}
 
 	return
+}
+
+// collectBoolFlagNames walks the whole commands.wsl-derived tree — the
+// global "*" block plus every group/subcommand — and returns the long and
+// short spellings (dashes-stripped) of every flag declared "type": "bool".
+// It reads groups only; RegisterCommands still does its own (destructive)
+// walk afterward. An entry that only carries "$extends" has no "options" of
+// its own to contribute here, but the sibling it extends does, and that
+// sibling is walked too — so its bool flags are still collected.
+func collectBoolFlagNames(groups map[string]interface{}) map[string]bool {
+	names := map[string]bool{}
+	addOptionsSlice := func(optionsSlice []interface{}) {
+		for _, opts := range optionsSlice {
+			o, ok := opts.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if t, _ := o["type"].(string); t != "bool" {
+				continue
+			}
+			if long, ok := o["long"].(string); ok && long != "" {
+				names[long] = true
+			}
+			if short, ok := o["short"].(string); ok && short != "" {
+				names[short] = true
+			}
+		}
+	}
+	for _, commandsList := range groups {
+		commandsConfigs, ok := commandsList.([]interface{})
+		if !ok {
+			continue
+		}
+		for _, commands := range commandsConfigs {
+			commandsMap, ok := commands.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			for _, commandConfig := range commandsMap {
+				cc, ok := commandConfig.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if optionsSlice, ok := cc["options"].([]interface{}); ok {
+					addOptionsSlice(optionsSlice)
+				}
+			}
+		}
+	}
+	return names
 }
 
 func (c *cliTransitions) getOptions(optionsSlice []interface{}, fs *flag.FlagSet) (flags map[string]interface{}) {
